@@ -13,16 +13,20 @@ jobs:
 
   test:
     runs-on: ubuntu-20.04
+    needs: build
     steps:
       - run: echo "This is a test step"
 
   integration:
     runs-on: ubuntu-20.04
+    needs: test
     steps:
       - run: echo "This is an integration step"
       - run: exit 1
+        continue-on-error: true
 
   prod:
     runs-on: ubuntu-20.04
+    needs: integration
     steps:
       - run: echo "This is a deploy step"
