@@ -26,6 +26,13 @@ jobs:
             echo "This is an integration step"
             exit 1
           when: on_fail
+  release:
+    machine: true
+    steps:
+      - checkout
+      - run: |
+          docker build -t $DOCKER_USERNAME/django.nv .
+          docker push $DOCKER_USERNAME/django.nv
   prod:
     docker:
       - image: python:3.6
@@ -52,9 +59,12 @@ workflows:
       - integration:
           requires:
             - test
-      - prod:
+      - release:
           requires:
             - integration
+      - prod:
+          requires:
+            - release
       - artifact:
           requires:
             - prod
