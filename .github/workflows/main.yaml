@@ -1,15 +1,15 @@
-name: Django                                  # workflow name
+name: Django
 
 on:
-  push:                                       
-    branches:                                 # similar to "only" in GitLab
+  push:
+    branches:
       - main
 
 jobs:
   build:
-    runs-on: ubuntu-22.04                    # similar to "image" in GitLab
+    runs-on: ubuntu-22.04
     steps:
-      - run: echo "This is a build step"      # similar to "script" in GitLab
+      - run: echo "This is a build step"
 
   test:
     runs-on: ubuntu-22.04
@@ -20,13 +20,26 @@ jobs:
   integration:
     runs-on: ubuntu-22.04
     needs: test
+    continue-on-error: true           # equivalent to allow_failure: true
     steps:
       - run: echo "This is an integration step"
       - run: exit 1
-        continue-on-error: true
+
+  artifact:
+    runs-on: ubuntu-22.04
+    needs: integration
+    steps:
+      - name: Create file
+        run: echo "hello" > hello.txt
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: hello-artifact
+          path: hello.txt
 
   prod:
     runs-on: ubuntu-22.04
-    needs: integration
+    needs: artifact
     steps:
       - run: echo "This is a deploy step"
