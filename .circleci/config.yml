@@ -25,18 +25,36 @@ jobs:
           command: |
             echo "This is an integration step"
             exit 1
-          allow_failure: true
+          when: on_fail
   prod:
     docker:
       - image: python:3.6
     steps:
       - checkout
       - run: echo "This is a deploy step"
+  artifact:
+    docker:
+      - image: python:3.6
+    steps:
+      - checkout
+      - run:
+          command: echo "hello" > hello.txt
+      - store_artifacts:
+          path: hello.txt
 workflows:
   version: 2
   django:
     jobs:
       - build
-      - test
-      - integration
-      - prod
+      - test:
+          requires:
+            - build
+      - integration:
+          requires:
+            - test
+      - prod:
+          requires:
+            - integration
+      - artifact:
+          requires:
+            - prod
