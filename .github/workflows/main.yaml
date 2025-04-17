@@ -1,0 +1,45 @@
+name: Django
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+    steps:
+      - run: echo "This is a build step"
+
+  test:
+    runs-on: ubuntu-22.04
+    needs: build
+    steps:
+      - run: echo "This is a test step"
+
+  integration:
+    runs-on: ubuntu-22.04
+    needs: test
+    continue-on-error: true           # equivalent to allow_failure: true
+    steps:
+      - run: echo "This is an integration step"
+      - run: exit 1
+
+  artifact:
+    runs-on: ubuntu-22.04
+    needs: integration
+    steps:
+      - name: Create file
+        run: echo "hello" > hello.txt
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: hello-artifact
+          path: hello.txt
+
+  prod:
+    runs-on: ubuntu-22.04
+    needs: artifact
+    steps:
+      - run: echo "This is a deploy step"
