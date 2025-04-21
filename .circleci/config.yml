@@ -17,20 +17,20 @@ jobs:
           pip install -r requirements.txt
           python manage.py test taskManager
 
-oast-frontend:
-  machine: true
-  steps:
-    - checkout
-    - run:
-        command: |
-          npm install
-          npm install -g retire@5.0.0
-          docker run --rm -v $(pwd):/src -w /src hysnsec/retire --outputformat json --outputpath retirejs-report.json --severity high || true
+  oast-frontend:
+    machine: true
+    steps:
+      - checkout
+      - run:
+          command: |
+            npm install
+            npm install -g retire@5.0.0
+            docker run --rm -v $(pwd):/src -w /src hysnsec/retire --outputformat json --outputpath retirejs-report.json --severity high || true
 
-    - store_artifacts:
-        path: retirejs-report.json
-        destination: retirejs-artifact
-        when: always
+      - store_artifacts:
+          path: retirejs-report.json
+          destination: retirejs-artifact
+          when: always
 
 
   integration:
