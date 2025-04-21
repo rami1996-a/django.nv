@@ -44,19 +44,22 @@ jobs:
   oast-frontend:
     runs-on: ubuntu-22.04
     needs: test
-    container: node:alpine3.10
     steps:
       - uses: actions/checkout@v2
-
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '12.x'
+          
       - run: npm install
       - run: npm install -g retire@5.0.0
-      - run: retire --outputformat json --outputpath report.json --severity high
+      - run: docker run --rm -v $(pwd):/src -w /src hysnsec/retire --outputformat json --outputpath retirejs-report.json --severity high
         continue-on-error: true
 
       - uses: actions/upload-artifact@v4
+        name: "Upload RetireJS Artifact - v4"
         with:
-          name: report
-          path: report.json
+          name: retirejs
+          path: retirejs-report.json
         if: always()
 
   integration:
