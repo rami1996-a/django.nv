@@ -25,7 +25,7 @@ jobs:
           command: |
             npm install
             npm install -g retire@5.0.0
-            docker run --rm -v $(pwd):/src -w /src hysnsec/retire --outputformat json --outputpath retirejs-report.json --severity high || true
+            docker run --rm -v $(pwd):/src -w /src hysnsec/retire --outputformat json --outputpath retirejs-report.json --severity high 
 
       - store_artifacts:
           path: retirejs-report.json
