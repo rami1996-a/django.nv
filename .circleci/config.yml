@@ -8,6 +8,7 @@ jobs:
       - run: |
           pip install -r requirements.txt
           python manage.py check
+
   test:
     docker:
       - image: python:3.6
@@ -16,6 +17,21 @@ jobs:
       - run: |
           pip install -r requirements.txt
           python manage.py test taskManager
+
+  oast-frontend:
+    machine: true
+    steps:
+      - checkout
+      - run:
+          command: |
+            npm install
+            npm install -g retire@5.0.0
+            docker run --rm -v $(pwd):/src -w /src hysnsec/retire --outputformat json --outputpath retirejs-report.json --severity high || true
+      - store_artifacts:
+          path: retirejs-report.json
+          destination: retirejs-artifact
+          when: always
+
   integration:
     docker:
       - image: python:3.6
@@ -26,29 +42,14 @@ jobs:
             echo "This is an integration step"
             exit 1
           when: on_fail
-  release:
-    machine: true
-    steps:
-      - checkout
-      - run: |
-          echo $DOCKER_PASSWORD | docker login -u $DOCKER_USERNAME --password-stdin
-          docker build -t $DOCKER_USERNAME/django.nv .
-          docker push $DOCKER_USERNAME/django.nv
+
   prod:
     docker:
       - image: python:3.6
     steps:
       - checkout
       - run: echo "This is a deploy step"
-  artifact:
-    docker:
-      - image: python:3.6
-    steps:
-      - checkout
-      - run:
-          command: echo "hello" > hello.txt
-      - store_artifacts:
-          path: hello.txt
+
 workflows:
   version: 2
   django:
@@ -57,15 +58,13 @@ workflows:
       - test:
           requires:
             - build
-      - integration:
+      - oast-frontend:
           requires:
             - test
-      - release:
+      - integration:
+          requires:
+            - oast-frontend
+      - prod:
+          type: approval
           requires:
             - integration
-      - prod:
-          requires:
-            - release
-      - artifact:
-          requires:
-            - prod
