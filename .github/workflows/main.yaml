@@ -41,25 +41,27 @@ jobs:
           pip install -r requirements.txt
           python manage.py test taskManager
 
-  oast:
+  oast-frontend:
     runs-on: ubuntu-22.04
     needs: test
+    container: node:alpine3.10
     steps:
       - uses: actions/checkout@v2
 
-      - run: pip3 install pip-audit==1.1.2
-      - run: pip-audit -r ./requirements.txt -f json | tee pip-audit-output.json
+      - run: npm install
+      - run: npm install -g retire@5.0.0
+      - run: retire --outputformat json --outputpath report.json --severity high
         continue-on-error: true
 
       - uses: actions/upload-artifact@v4
         with:
-          name: pip-audit
-          path: pip-audit-output.json
+          name: report
+          path: report.json
         if: always()
 
   integration:
     runs-on: ubuntu-22.04
-    needs: oast
+    needs: oast-frontend
     steps:
       - run: echo "This is an integration step"
       - run: exit 1
