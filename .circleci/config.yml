@@ -120,6 +120,8 @@ workflows:
       - integration:
           requires:
             - oast
+            - oast-frontend
+            - odc-backend
       - prod:
           type: approval
           requires:
