@@ -1,31 +1,124 @@
-jobs:
+obs:
   build:
-    machine: true
+    docker:
+      - image: python:3.6                   # similar to "image" in GitLab
     steps:
       - checkout
-      - run: echo "This is a build step"
+      - run: |                              # similar to "script" in GitLab
+          pip install -r requirements.txt
+          python manage.py check
 
   test:
+    docker:
+      - image: python:3.6
+    steps:
+      - checkout
+      - run: |
+          pip install -r requirements.txt
+          python manage.py test taskManager
+
+  oast:
     machine: true
     steps:
       - checkout
-      - run: echo "This is a test step"
 
-    
+      - run:
+          command: docker run -v $(pwd):/src --rm hysnsec/safety check -r /src/requirements.txt --json | tee oast-results.json || true
+
+      - store_artifacts:
+          path: oast-results.json
+          destination: safety-artifact
+          when: always
+
+  oast-frontend:
+    machine: true
+    steps:
+      - checkout
+      - run:
+          command: |
+            npm install
+            npm install -g retire@5.0.0
+            docker run --rm -v $(pwd):/src -w /src hysnsec/retire --outputformat json --outputpath retirejs-report.json --severity high || true
+
+      - store_artifacts:
+          path: retirejs-report.json
+          destination: retirejs-artifact
+          when: always
   odc-backend:
     machine: true
     steps:
       - checkout
-      - run: chmod +x ./run-depcheck.sh && ./run-depcheck.sh || true
+
+      - run:
+          name: Run OWASP Dependency-Check
+          command: |
+            DATA_DIRECTORY="$PWD/data"
+            REPORT_DIRECTORY="$PWD/reports"
+
+            if [ ! -d "$DATA_DIRECTORY" ]; then
+              echo "Initially creating persistent directories"
+              mkdir -p "$DATA_DIRECTORY"
+              chmod -R 777 "$DATA_DIRECTORY"
+
+              mkdir -p "$REPORT_DIRECTORY"
+              chmod -R 777 "$REPORT_DIRECTORY"
+            fi
+            docker pull owasp/dependency-check
+
+            docker run --rm \
+              --volume $(pwd):/src \
+              --volume "$DATA_DIRECTORY":/usr/share/dependency-check/data \
+              --volume "$REPORT_DIRECTORY":/reports \
+              owasp/dependency-check \
+              --scan /src \
+              --format "JSON" \
+              --project "django" \
+              --failOnCVSS 8 \
+              --out /reports
 
       - store_artifacts:
           path: reports/dependency-check-report.json
           destination: depcheck-artifact
+
+  integration:
+    docker:
+      - image: python:3.6
+    steps:
+      - checkout
+      - run:
+          command: |
+            echo "This is an integration step"
+            exit 1
+          when: on_fail                    # Even if the job fails, continue to the next stages
+
+  prod:
+    docker:
+      - image: python:3.6
+    steps:
+      - checkout
+      - run: echo "This is a deploy step"
 
 workflows:
   version: 2
   django:
     jobs:
       - build
-      - test
-      - odc-backend
+      - test:
+          requires:
+            - build
+      - oast:
+          requires:
+            - test
+      - oast-frontend:
+          requires:
+            - test
+      - odc-backend:
+          requires:
+            - test
+      - integration:
+          requires:
+            - oast
+      - prod:
+          type: approval
+          requires:
+            - integration
