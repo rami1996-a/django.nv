@@ -1,20 +1,20 @@
-name: Django
+name: Django                                  # workflow name
 
 on:
   push:
-    branches:
+    branches:                                 # similar to "only" in GitLab
       - main
 
 jobs:
   build:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-20.04   # similar to "image" in GitLab
     steps:
       - uses: actions/checkout@v2
 
-      - name: Setup Python
+      - name: Setup python
         uses: actions/setup-python@v2
         with:
-          python-version: '3.9'
+          python-version: '3.6'
 
       - run: |
           pip3 install --upgrade virtualenv
@@ -24,15 +24,15 @@ jobs:
           python manage.py check
 
   test:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-20.04
     needs: build
     steps:
       - uses: actions/checkout@v2
 
-      - name: Setup Python
+      - name: Setup python
         uses: actions/setup-python@v2
         with:
-          python-version: '3.9'
+          python-version: '3.6'
 
       - run: |
           pip3 install --upgrade virtualenv
@@ -41,6 +41,21 @@ jobs:
           pip install -r requirements.txt
           python manage.py test taskManager
 
+  oast:
+    runs-on: ubuntu-20.04
+    needs: test
+    steps:
+      - uses: actions/checkout@v2
+
+      - run: docker run --rm -v $(pwd):/src hysnsec/safety check -r requirements.txt --json > oast-results.json
+        continue-on-error: true             # allow the build to fail, similar to "allow_failure: true" in GitLab
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Safety
+          path: oast-results.json
+        if: always()                        # what is this for?
+        
   oast-frontend:
     runs-on: ubuntu-22.04
     needs: test
@@ -62,16 +77,39 @@ jobs:
           path: retirejs-report.json
         if: always()
 
-  integration:
+  odc-backend:
     runs-on: ubuntu-22.04
-    needs: oast-frontend
+    name: depecheck_test
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Depcheck
+        uses: dependency-check/Dependency-Check_Action@main
+        id: Depcheck
+        with:
+          project: 'django'
+          path: '.'
+          format: 'JSON'
+
+      - name: Upload Test results
+        uses: actions/upload-artifact@master
+        with:
+           name: Depcheck report
+           path: ${{github.workspace}}/reports
+           
+
+
+  integration:
+    runs-on: ubuntu-20.04
+    needs: oast
     steps:
       - run: echo "This is an integration step"
       - run: exit 1
         continue-on-error: true
 
   prod:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-20.04
     needs: integration
     steps:
       - run: echo "This is a deploy step."
