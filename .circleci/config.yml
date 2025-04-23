@@ -18,6 +18,19 @@ jobs:
           pip install -r requirements.txt
           python manage.py test taskManager
 
+  oast:
+    machine: true
+    steps:
+      - checkout
+
+      - run:
+          command: docker run -v $(pwd):/src --rm hysnsec/safety check -r /src/requirements.txt --json | tee oast-results.json || true
+
+      - store_artifacts:
+          path: oast-results.json
+          destination: safety-artifact
+          when: always
+
   oast-frontend:
     machine: true
     steps:
@@ -27,10 +40,47 @@ jobs:
             npm install
             npm install -g retire@5.0.0
             docker run --rm -v $(pwd):/src -w /src hysnsec/retire --outputformat json --outputpath retirejs-report.json --severity high || true
+
       - store_artifacts:
           path: retirejs-report.json
           destination: retirejs-artifact
           when: always
+
+  odc-backend:
+    machine: true
+    steps:
+      - checkout
+
+      - run:
+          name: Run OWASP Dependency-Check
+          command: |
+            DATA_DIRECTORY="$PWD/data"
+            REPORT_DIRECTORY="$PWD/reports"
+
+            if [ ! -d "$DATA_DIRECTORY" ]; then
+              echo "Initially creating persistent directories"
+              mkdir -p "$DATA_DIRECTORY"
+              chmod -R 777 "$DATA_DIRECTORY"
+
+              mkdir -p "$REPORT_DIRECTORY"
+              chmod -R 777 "$REPORT_DIRECTORY"
+            fi
+            docker pull owasp/dependency-check
+
+            docker run --rm \
+              --volume $(pwd):/src \
+              --volume "$DATA_DIRECTORY":/usr/share/dependency-check/data \
+              --volume "$REPORT_DIRECTORY":/reports \
+              owasp/dependency-check \
+              --scan /src \
+              --format "JSON" \
+              --project "django" \
+              --failOnCVSS 8 \
+              --out /reports
+
+      - store_artifacts:
+          path: reports/dependency-check-report.json
+          destination: depcheck-artifact
 
   integration:
     docker:
@@ -58,12 +108,18 @@ workflows:
       - test:
           requires:
             - build
+      - oast:
+          requires:
+            - test
       - oast-frontend:
+          requires:
+            - test
+      - odc-backend:
           requires:
             - test
       - integration:
           requires:
-            - oast-frontend
+            - oast
       - prod:
           type: approval
           requires:
