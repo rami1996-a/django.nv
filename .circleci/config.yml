@@ -8,7 +8,23 @@ jobs:
       - run: |
           pip install -r requirements.txt
           python manage.py check
-
+  oast-snyk:
+    docker:
+      - image: node:alpine3.10
+    steps:
+      - checkout
+      - run: 
+          command: |
+            wget -O snyk https://github.com/snyk/cli/releases/download/v1.1156.0/snyk-alpine
+            chmod +x snyk
+            mv snyk /usr/local/bin/
+            npm install
+            snyk auth $SNYK_TOKEN
+            snyk test --json > snyk-results.json || true
+      - store_artifacts:
+          path: snyk-results.json
+          destination: snyk-artifact
+          when: always
   test:
     docker:
       - image: python:3.6
@@ -17,20 +33,16 @@ jobs:
       - run: |
           pip install -r requirements.txt
           python manage.py test taskManager
-
   oast:
     machine: true
     steps:
       - checkout
-
       - run:
           command: docker run -v $(pwd):/src --rm hysnsec/safety check -r /src/requirements.txt --json | tee oast-results.json || true
-
       - store_artifacts:
           path: oast-results.json
           destination: safety-artifact
           when: always
-
   oast-frontend:
     machine: true
     steps:
@@ -40,33 +52,27 @@ jobs:
             npm install
             npm install -g retire@5.0.0
             docker run --rm -v $(pwd):/src -w /src hysnsec/retire --outputformat json --outputpath retirejs-report.json --severity high || true
-
       - store_artifacts:
           path: retirejs-report.json
           destination: retirejs-artifact
           when: always
-
   odc-backend:
     machine: true
     steps:
       - checkout
-
       - run:
           name: Run OWASP Dependency-Check
           command: |
             DATA_DIRECTORY="$PWD/data"
             REPORT_DIRECTORY="$PWD/reports"
-
             if [ ! -d "$DATA_DIRECTORY" ]; then
               echo "Initially creating persistent directories"
               mkdir -p "$DATA_DIRECTORY"
               chmod -R 777 "$DATA_DIRECTORY"
-
               mkdir -p "$REPORT_DIRECTORY"
               chmod -R 777 "$REPORT_DIRECTORY"
             fi
             docker pull owasp/dependency-check
-
             docker run --rm \
               --volume $(pwd):/src \
               --volume "$DATA_DIRECTORY":/usr/share/dependency-check/data \
@@ -77,11 +83,9 @@ jobs:
               --project "django" \
               --failOnCVSS 8 \
               --out /reports
-
       - store_artifacts:
           path: reports/dependency-check-report.json
           destination: depcheck-artifact
-
   integration:
     docker:
       - image: python:3.6
@@ -92,14 +96,12 @@ jobs:
             echo "This is an integration step"
             exit 1
           when: on_fail
-
   prod:
     docker:
       - image: python:3.6
     steps:
       - checkout
       - run: echo "This is a deploy step"
-
 workflows:
   version: 2
   django:
@@ -120,8 +122,6 @@ workflows:
       - integration:
           requires:
             - oast
-            - oast-frontend
-            - odc-backend
       - prod:
           type: approval
           requires:
