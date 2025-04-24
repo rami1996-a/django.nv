@@ -1,4 +1,5 @@
-obs:
+version: 2.1
+jobs:
   build:
     docker:
       - image: python:3.6                   # similar to "image" in GitLab
@@ -26,7 +27,6 @@ obs:
           path: snyk-results.json
           destination: snyk-artifact
           when: always
-
   test:
     docker:
       - image: python:3.6
@@ -122,6 +122,9 @@ workflows:
   django:
     jobs:
       - build
+      - oast-snyk:
+          requires:
+            - build
       - test:
           requires:
             - build
@@ -137,6 +140,8 @@ workflows:
       - integration:
           requires:
             - oast
+            - oast-frontend
+            - odc-backend
       - prod:
           type: approval
           requires:
