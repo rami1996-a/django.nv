@@ -22,34 +22,6 @@ jobs:
           source env/bin/activate
           pip install -r requirements.txt
           python manage.py check
-  oast-snyk:
-      runs-on: ubuntu-22.04
-      needs: build
-      steps:
-        - uses: actions/checkout@master
-        - uses: snyk/actions/setup@master
-        - uses: actions/setup-go@v1
-          with:
-            go-version: "1.13"
-
-        - uses: actions/setup-node@v2
-          with:
-            node-version: '10.x'
-
-        - name: Install Node modules
-          run: npm install
-
-        - name: Run Snyk
-          run: snyk test --json > snyk-results.json
-          env:
-            SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
-          continue-on-error: true             # allow the build to fail, similar to allow_failure: true
-        - uses: actions/upload-artifact@v4
-          with:
-            name: Snyk
-            path: snyk-results.json
-          if: always()        # what is this for?
-
   test:
     runs-on: ubuntu-20.04
     needs: build
@@ -68,13 +40,17 @@ jobs:
           pip install -r requirements.txt
           python manage.py test taskManager
 
-  oast:
+  osv-scanner:
     runs-on: ubuntu-20.04
     needs: test
     steps:
       - uses: actions/checkout@v2
+      - uses: actions/golang:1.22-alpine3.19
 
-      - run: docker run --rm -v $(pwd):/src hysnsec/safety check -r requirements.txt --json > oast-results.json
+      - run: apk add npm
+      - run: npm install
+      - run: go install github.com/google/osv-scanner/cmd/osv-scanner@v1
+      - run: osv-scanner --json . > osv-report.json
         continue-on-error: true             # allow the build to fail, similar to "allow_failure: true" in GitLab
 
       - uses: actions/upload-artifact@v4
@@ -83,53 +59,10 @@ jobs:
           path: oast-results.json
         if: always()                        # what is this for?
         
-  oast-frontend:
-    runs-on: ubuntu-22.04
-    needs: test
-    steps:
-      - uses: actions/checkout@v2
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '12.x'
-          
-      - run: npm install
-      - run: npm install -g retire@5.0.0
-      - run: docker run --rm -v $(pwd):/src -w /src hysnsec/retire --outputformat json --outputpath retirejs-report.json --severity high
-        continue-on-error: true
-
-      - uses: actions/upload-artifact@v4
-        name: "Upload RetireJS Artifact - v4"
-        with:
-          name: retirejs
-          path: retirejs-report.json
-        if: always()
-
-  odc-backend:
-    runs-on: ubuntu-22.04
-    name: depecheck_test
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v2
-
-      - name: Depcheck
-        uses: dependency-check/Dependency-Check_Action@main
-        id: Depcheck
-        with:
-          project: 'django'
-          path: '.'
-          format: 'JSON'
-
-      - name: Upload Test results
-        uses: actions/upload-artifact@master
-        with:
-           name: Depcheck report
-           path: ${{github.workspace}}/reports
-           
-
 
   integration:
     runs-on: ubuntu-20.04
-    needs: oast
+    needs: osv-scanner
     steps:
       - run: echo "This is an integration step"
       - run: exit 1
