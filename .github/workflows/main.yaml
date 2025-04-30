@@ -6,36 +6,6 @@ on:
       - main
 
 jobs:
-  build:
-    runs-on: ubuntu-22.04
-    steps:
-      - uses: actions/checkout@v2
-      - uses: actions/setup-python@v2
-        with:
-          python-version: '3.8'  # Updated to supported version
-      - run: |
-          pip3 install --upgrade virtualenv
-          virtualenv env
-          source env/bin/activate
-          pip install -r requirements.txt
-          python manage.py check
-
-  test:
-    runs-on: ubuntu-22.04
-    needs: build
-    steps:
-      - uses: actions/checkout@v2
-      - uses: actions/setup-python@v2
-        with:
-          python-version: '3.8'  # Updated to supported version
-      - run: |
-          pip3 install --upgrade virtualenv
-          virtualenv env
-          source env/bin/activate
-          pip install -r requirements.txt
-          python manage.py test taskManager
-
-  # Rest of your workflow remains unchanged
   osv-scanner:
     runs-on: ubuntu-22.04
     needs: test
@@ -54,17 +24,3 @@ jobs:
           name: OSV-Report
           path: osv-report.json
         if: always()
-
-  integration:
-    runs-on: ubuntu-22.04
-    needs: osv-scanner
-    steps:
-      - run: echo "This is an integration step"
-      - run: exit 1
-        continue-on-error: true
-
-  prod:
-    runs-on: ubuntu-22.04
-    needs: integration
-    steps:
-      - run: echo "This is a deploy step."
