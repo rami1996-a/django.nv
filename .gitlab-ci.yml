@@ -1,17 +1,33 @@
-image: docker:20.10
+on:
+  push:
+    branches:
+      - main
 
-services:
-  - docker:dind
+jobs:
+  
+  osv-scanner:
+    needs: test
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v2
 
-stages:
-  - build
-  - test
-  - release
-  - preprod
-  - integration
-  - prod
+      - run: |
+          sudo apt-get update
+          sudo apt-get install -y docker-ce docker-ce-cli containerd.io
 
-job:
-  stage: build
-  script:
-    - echo "I'm a job"
+      - uses: actions/golang:1.22-alpine3.19
+
+      - run: apk add --no-cache npm
+
+      - run: npm install
+
+      - run: go install github.com/google/osv-scanner/cmd/osv-scanner@v1
+
+      - run: osv-scanner --json . > osv-report.json
+        continue-on-error: true
+
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: safety-report
+          path: osv-report.json
