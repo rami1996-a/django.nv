@@ -33,10 +33,10 @@ jobs:
       - run: sudo apt-get install npm
       - run: npm install
       - run: go install github.com/google/osv-scanner/cmd/osv-scanner@v1
-      - run: osv-scanner --format yaml . > osv-report.yaml   
+      - run: osv-scanner --format yml . > osv-report.yml   
         continue-on-error: true
       - uses: actions/upload-artifact@v4
         with:
           name: OSV-Report
-          path: osv-report.yaml
+          path: osv-report.yml
         if: always()
