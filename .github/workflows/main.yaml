@@ -10,7 +10,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Run detect-secrets Scanner
-        run: docker run --rm -v $(pwd):/src -w /src hysnsec/detect-secrets scan . --json | tee secrets.json
+        run: docker run --rm -v $(pwd):/src -w /src hysnsec/detect-secrets scan . | tee secrets.json
         continue-on-error: true
         
       - name: Upload results
