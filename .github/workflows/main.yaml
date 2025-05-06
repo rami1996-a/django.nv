@@ -10,7 +10,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Run detect-secrets Scanner
-        run: docker pull hysnsec/detect-secrets
         run: docker run -it -v $(pwd):/src -w /src hysnsec/detect-secrets --json | tee secrets.json
         continue-on-error: true
         
