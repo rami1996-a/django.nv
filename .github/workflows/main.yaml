@@ -5,12 +5,13 @@ on:
     branches: [ main ]
 
 jobs:
-  git_secrets:
+  detect-secrets:
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
-      - name: Run git_secrets Scanner
-        run: docker run --rm -v $(pwd):/src -i hysnsec/trufflehog  filesystem /src --json | tee secrets.json
+      - name: Run detect-secrets Scanner
+        run: docker pull hysnsec/detect-secrets
+        run: docker run -it -v $(pwd):/src -w /src hysnsec/detect-secrets --json | tee secrets.json
         continue-on-error: true
         
       - name: Upload results
