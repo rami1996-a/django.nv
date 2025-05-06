@@ -10,7 +10,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Run git_secrets Scanner
-        run: docker run --user $(id -u):$(id -g) --rm -v $(pwd):/src -i hysnsec/trufflehog --json git https://github.com/rami1996-a/django.nv.git | tee secrets.json
+        run: docker run --rm -v $(pwd):/src -i hysnsec/trufflehog  filesystem /src --json | tee secrets.json
         continue-on-error: true
         
       - name: Upload results
