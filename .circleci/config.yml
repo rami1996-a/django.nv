@@ -42,11 +42,10 @@ jobs:
   integration:
     docker:
       - image: python:3.6
-    continue_on_error: true
     steps:
       - checkout
       - run:
-          name: Integration step (errors won’t stop the workflow)
+          name: Integration step (allowed to fail)
           command: |
             echo "This is an integration step"
             exit 1
