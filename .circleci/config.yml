@@ -1,39 +1,33 @@
-version: 2.1
-
 jobs:
   build:
     docker:
-      - image: python:3.6
+      - image: python:3.6                   # similar to "image" in GitLab
     steps:
       - checkout
-      - run:
-          name: Install & Check
-          command: |
-            pip install -r requirements.txt
-            python manage.py check
-
-  bandit:
-    steps:
-      - checkout
-      - run:
-          name: Run Semgrep scan
-          command: |
-            docker pull hysnsec/bandit
-            docker run --rm -v $(pwd):/src hysnsec/bandit -r /src -f json | tee bandit.json || true
-      - store_artifacts:
-          path: bandit.json
-          destination: Semgrep-artifact
+      - run: |                              # similar to "script" in GitLab
+          pip install -r requirements.txt
+          python manage.py check
 
   test:
     docker:
       - image: python:3.6
     steps:
       - checkout
-      - run:
-          name: Install & Test
-          command: |
-            pip install -r requirements.txt
-            python manage.py test taskManager
+      - run: |
+          pip install -r requirements.txt
+          python manage.py test taskManager
+
+  bandit:
+    machine: true
+    steps:
+      - checkout
+
+      - run: docker run --rm -v $(pwd):/src hysnsec/bandit -r /src -f json -o /src/bandit-output.json || true
+
+      - store_artifacts:
+          path: bandit-output.json
+          destination: bandit-artifact
+          when: always
 
   integration:
     docker:
@@ -41,34 +35,32 @@ jobs:
     steps:
       - checkout
       - run:
-          name: Integration step (allowed to fail)
           command: |
             echo "This is an integration step"
             exit 1
+          when: on_fail           # Even if the job fails, continue to the next stages
 
   prod:
     docker:
       - image: python:3.6
     steps:
       - checkout
-      - run:
-          name: Deploy
-          command: echo "This is a deploy step"
+      - run: echo "This is a deploy step."
 
 workflows:
   version: 2
   django:
     jobs:
       - build
-      - bandit:
-          requires:
-            - build
       - test:
           requires:
             - build
-      - integration:
+      - bandit:
           requires:
             - test
+      - integration:
+          requires:
+            - sast
       - prod:
           type: approval
           requires:
