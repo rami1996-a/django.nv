@@ -1,13 +1,17 @@
 version: 2.1
+
 jobs:
   build:
     docker:
-      - image: python:3.6                   # similar to "image" in GitLab
+      - image: python:3.6
     steps:
       - checkout
-      - run: |                              # similar to "script" in GitLab
-          pip install -r requirements.txt
-          python manage.py check
+      - run:
+          name: Install & Check
+          command: |
+            pip install -r requirements.txt
+            python manage.py check
+
   semgrep:
     docker:
       - image: semgrep/semgrep:latest
@@ -23,39 +27,45 @@ jobs:
       - store_artifacts:
           path: Semgrep.json
           destination: Semgrep-artifact
+
   test:
     docker:
       - image: python:3.6
     steps:
       - checkout
-      - run: |
-          pip install -r requirements.txt
-          python manage.py test taskManager
-          
+      - run:
+          name: Install & Test
+          command: |
+            pip install -r requirements.txt
+            python manage.py test taskManager
+
   integration:
     docker:
       - image: python:3.6
+    continue_on_error: true
     steps:
       - checkout
       - run:
+          name: Integration step (errors won’t stop the workflow)
           command: |
             echo "This is an integration step"
             exit 1
-          when: on_fail                    # Even if the job fails, continue to the next stages
 
   prod:
     docker:
       - image: python:3.6
     steps:
       - checkout
-      - run: echo "This is a deploy step"
+      - run:
+          name: Deploy
+          command: echo "This is a deploy step"
 
 workflows:
   version: 2
   django:
     jobs:
       - build
-      - Semgrep:
+      - semgrep:
           requires:
             - build
       - test:
