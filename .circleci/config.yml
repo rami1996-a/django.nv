@@ -8,20 +8,21 @@ jobs:
       - run: |                              # similar to "script" in GitLab
           pip install -r requirements.txt
           python manage.py check
-  Semgrep:
+  semgrep:
     docker:
-      - image: docker:dind
+      - image: semgrep/semgrep:latest
     steps:
       - checkout
-      - run: 
+      - run:
+          name: Run Semgrep scan
           command: |
-           docker pull semgrep/semgrep
-           docker run --rm -v "${PWD}:/src" semgrep/semgrep semgrep --help || true
-
+            semgrep \
+              --config=semgrep-rules.yml \
+              --json --output Semgrep.json \
+              --metrics=off || true
       - store_artifacts:
           path: Semgrep.json
           destination: Semgrep-artifact
-          when: always
   test:
     docker:
       - image: python:3.6
