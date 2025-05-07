@@ -60,7 +60,7 @@ workflows:
             - test
       - integration:
           requires:
-            - sast
+            - bandit
       - prod:
           type: approval
           requires:
