@@ -15,6 +15,9 @@ jobs:
   semgrep:
     docker:
       - image: semgrep/semgrep:latest
+    environment:
+      # turn off ALL metrics, even if someone accidentally switches to a p/… config
+      SEMGREP_METRICS: "off"
     steps:
       - checkout
       - run:
@@ -22,8 +25,7 @@ jobs:
           command: |
             semgrep \
               --config=semgrep-rules.yml \
-              --json --output Semgrep.json \
-              --metrics=off || true
+              --json --output Semgrep.json || true
       - store_artifacts:
           path: Semgrep.json
           destination: Semgrep-artifact
