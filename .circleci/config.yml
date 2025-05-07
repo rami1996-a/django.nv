@@ -13,8 +13,6 @@ jobs:
             python manage.py check
 
   bandit:
-    docker:
-      - image: docker:dind
     steps:
       - checkout
       - run:
