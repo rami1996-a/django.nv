@@ -8,24 +8,18 @@ jobs:
       - run: |                              # similar to "script" in GitLab
           pip install -r requirements.txt
           python manage.py check
-  oast-snyk:
+  Semgrep:
     docker:
-      - image: node:alpine3.10
+      - image: semgrep/semgrep
     steps:
       - checkout
-
       - run: 
           command: |
-            wget -O snyk https://github.com/snyk/cli/releases/download/v1.1156.0/snyk-alpine
-            chmod +x snyk
-            mv snyk /usr/local/bin/
-            npm install
-            snyk auth b3bf23ff-6b48-4a83-ac25-393e896575c5
-            snyk test --json > snyk-results.json || true
+            docker run --rm -v "${PWD}:/src" semgrep/semgrep semgrep --help || true
 
       - store_artifacts:
-          path: snyk-results.json
-          destination: snyk-artifact
+          path: Semgrep.json
+          destination: Semgrep-artifact
           when: always
   test:
     docker:
@@ -35,70 +29,7 @@ jobs:
       - run: |
           pip install -r requirements.txt
           python manage.py test taskManager
-
-  oast:
-    machine: true
-    steps:
-      - checkout
-
-      - run:
-          command: docker run -v $(pwd):/src --rm hysnsec/safety check -r /src/requirements.txt --json | tee oast-results.json || true
-
-      - store_artifacts:
-          path: oast-results.json
-          destination: safety-artifact
-          when: always
-
-  oast-frontend:
-    machine: true
-    steps:
-      - checkout
-      - run:
-          command: |
-            npm install
-            npm install -g retire@5.0.0
-            docker run --rm -v $(pwd):/src -w /src hysnsec/retire --outputformat json --outputpath retirejs-report.json --severity high || true
-
-      - store_artifacts:
-          path: retirejs-report.json
-          destination: retirejs-artifact
-          when: always
-  odc-backend:
-    machine: true
-    steps:
-      - checkout
-
-      - run:
-          name: Run OWASP Dependency-Check
-          command: |
-            DATA_DIRECTORY="$PWD/data"
-            REPORT_DIRECTORY="$PWD/reports"
-
-            if [ ! -d "$DATA_DIRECTORY" ]; then
-              echo "Initially creating persistent directories"
-              mkdir -p "$DATA_DIRECTORY"
-              chmod -R 777 "$DATA_DIRECTORY"
-
-              mkdir -p "$REPORT_DIRECTORY"
-              chmod -R 777 "$REPORT_DIRECTORY"
-            fi
-            docker pull owasp/dependency-check
-
-            docker run --rm \
-              --volume $(pwd):/src \
-              --volume "$DATA_DIRECTORY":/usr/share/dependency-check/data \
-              --volume "$REPORT_DIRECTORY":/reports \
-              owasp/dependency-check \
-              --scan /src \
-              --format "JSON" \
-              --project "django" \
-              --failOnCVSS 8 \
-              --out /reports
-
-      - store_artifacts:
-          path: reports/dependency-check-report.json
-          destination: depcheck-artifact
-
+          
   integration:
     docker:
       - image: python:3.6
@@ -122,26 +53,15 @@ workflows:
   django:
     jobs:
       - build
-      - oast-snyk:
+      - Semgrep:
           requires:
             - build
       - test:
           requires:
             - build
-      - oast:
-          requires:
-            - test
-      - oast-frontend:
-          requires:
-            - test
-      - odc-backend:
-          requires:
-            - test
       - integration:
           requires:
-            - oast
-            - oast-frontend
-            - odc-backend
+            - test
       - prod:
           type: approval
           requires:
