@@ -15,7 +15,7 @@ jobs:
       - checkout
       - run:
           name: Run Semgrep Scan
-          command: semgrep --config auto --metrics=off --json --output Semgrep.json || true
+          command: semgrep --config=p/ci --json --output Semgrep.json || true
       - store_artifacts:
           path: Semgrep.json
           destination: Semgrep-artifact
