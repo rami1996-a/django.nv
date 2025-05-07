@@ -2,7 +2,7 @@ version: 2.1
 jobs:
   build:
     docker:
-      - image: python:3.6
+      - image: cimg/python:3.6
     steps:
       - checkout
       - run: |
@@ -10,20 +10,18 @@ jobs:
           python manage.py check
   Semgrep:
     docker:
-      - image: docker:dind
+      - image: semgrep/semgrep:latest
     steps:
       - checkout
       - run:
-          command: |
-            docker pull semgrep/semgrep
-            docker run --rm -v "${PWD}:/src" semgrep/semgrep semgrep --help || true
+          name: Run Semgrep Scan
+          command: semgrep --config auto --json --output Semgrep.json || true
       - store_artifacts:
           path: Semgrep.json
           destination: Semgrep-artifact
-          when: always
   test:
     docker:
-      - image: python:3.6
+      - image: cimg/python:3.6
     steps:
       - checkout
       - run: |
@@ -31,17 +29,16 @@ jobs:
           python manage.py test taskManager
   integration:
     docker:
-      - image: python:3.6
+      - image: cimg/python:3.6
     steps:
       - checkout
       - run:
+          name: Integration Step
           command: |
             echo "This is an integration step"
-            exit 1
-          when: on_fail
   prod:
     docker:
-      - image: python:3.6
+      - image: cimg/python:3.6
     steps:
       - checkout
       - run: echo "This is a deploy step"
