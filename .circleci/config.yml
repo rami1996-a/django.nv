@@ -12,19 +12,18 @@ jobs:
             pip install -r requirements.txt
             python manage.py check
 
-  semgrep:
+  bandit:
     docker:
-      - image: python:latest
+      - image: ubuntu:22.04
     steps:
       - checkout
       - run:
           name: Run Semgrep scan
           command: |
-            /usr/local/bin/python -m pip install --upgrade pip
-            pip3 install semgrep==1.30.0
-            semgrep scan --config p/secrets --json --output Semgrep.json || true
+            docker pull hysnsec/bandit
+            docker run --rm -v $(pwd):/src hysnsec/bandit -r /src -f json | tee bandit.json || true
       - store_artifacts:
-          path: Semgrep.json
+          path: bandit.json
           destination: Semgrep-artifact
 
   test:
@@ -63,7 +62,7 @@ workflows:
   django:
     jobs:
       - build
-      - semgrep:
+      - bandit:
           requires:
             - build
       - test:
