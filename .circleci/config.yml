@@ -14,18 +14,14 @@ jobs:
 
   semgrep:
     docker:
-      - image: semgrep/semgrep:latest
-    environment:
-      # turn off ALL metrics, even if someone accidentally switches to a p/… config
-      SEMGREP_METRICS: "off"
+      - image: python:3.6
     steps:
       - checkout
       - run:
           name: Run Semgrep scan
           command: |
-            semgrep \
-              --config=semgrep-rules.yml \
-              --json --output Semgrep.json || true
+            pip3 install semgrep==1.30.0
+            semgrep scan --config p/secrets --json --output Semgrep.json || true
       - store_artifacts:
           path: Semgrep.json
           destination: Semgrep-artifact
