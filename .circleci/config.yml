@@ -10,7 +10,7 @@ jobs:
           python manage.py check
   Semgrep:
     docker:
-      - image: semgrep/semgrep
+      - image: docker:dind
     steps:
       - checkout
       - run: 
