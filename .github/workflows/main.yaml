@@ -5,12 +5,14 @@ on:
     branches: [ main ]
 
 jobs:
-  detect-secrets:
+  bandit:
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
       - name: Run detect-secrets Scanner
-        run: docker run --rm -v $(pwd):/src -w /src hysnsec/detect-secrets scan . | tee secrets.json
+        run: |
+            docker pull hysnsec/bandit
+            docker run --rm -v $(pwd):/src hysnsec/bandit -r /src -f json | tee bandit.json
         continue-on-error: true
         
       - name: Upload results
@@ -18,5 +20,5 @@ jobs:
         with:
           name: security-reports
           path:
-            secrets.json
+            bandit.json
         if: always()
