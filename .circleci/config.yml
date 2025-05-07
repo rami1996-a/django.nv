@@ -15,7 +15,8 @@ jobs:
       - checkout
       - run: 
           command: |
-            docker run --rm -v "${PWD}:/src" semgrep/semgrep semgrep --help || true
+           docker pull semgrep/semgrep
+           docker run --rm -v "${PWD}:/src" semgrep/semgrep semgrep --help || true
 
       - store_artifacts:
           path: Semgrep.json
