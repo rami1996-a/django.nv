@@ -23,16 +23,16 @@ jobs:
     steps:
       - checkout
       - run: |
-            pip install --upgrade pip
-            pip install semgrep==1.30.0
+          pip install --upgrade pip
+          pip install semgrep==1.30.0
 
-            mkdir -p semgrep-results
+          mkdir -p semgrep-results
 
           # Run secret scan
-            semgrep --config p/secrets --output semgrep-results/semgrep.json --json || true
+          semgrep --config p/secrets --output semgrep-results/semgrep.json --json || true
 
           # Run generic scan
-            semgrep --config auto --output semgrep-results/semgrep-output.json --json || true
+          semgrep --config auto --output semgrep-results/semgrep-output.json --json || true
       - store_artifacts:
           path: semgrep-results
           destination: Semgrep-artifact
