@@ -25,11 +25,12 @@ jobs:
       - run:
           name: Run Semgrep scan
           command: |
-            /usr/local/bin/python -m pip install --upgrade pip
-            pip3 install semgrep==1.30.0
-            semgrep scan --config p/secrets --json --output Semgrep.json || true
-            docker run --rm -v ${PWD}:/src returntocorp/semgrep semgrep --config auto --output semgrep-output.json --json || true
-            mv Semgrep.json semgrep-results
+            docker run -v ${PWD}:/src returntocorp/semgrep 
+            docker exec -it webserver /bin/bash 
+            semgrep -scan --config p/secrets --output semgrep.json --json || true
+            semgrep --config auto --output semgrep-output.json --json || true
+            exit
+            mv semgrep.json semgrep-results
             mv semgrep-output.json semgrep-results
       - store_artifacts:
           path: semgrep-results
