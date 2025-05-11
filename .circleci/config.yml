@@ -17,15 +17,23 @@ jobs:
           pip install -r requirements.txt
           python manage.py test taskManager
 
-  semgrep:
-    machine: true
+  Semgrep:
+    docker:
+      - image: python:latest
     steps:
       - checkout
-      - run: docker run --rm -v ${PWD}:/src returntocorp/semgrep semgrep --config auto --output semgrep-output.json --json || true
+      - run:
+          name: Run Semgrep scan
+          command: |
+            /usr/local/bin/python -m pip install --upgrade pip
+            pip3 install semgrep==1.30.0
+            semgrep scan --config p/secrets --json --output Semgrep.json || true
+            docker run --rm -v ${PWD}:/src returntocorp/semgrep semgrep --config auto --output semgrep-output.json --json || true
       - store_artifacts:
-          path: semgrep-output.json
-          destination: semgrep-artifact
-          when: always
+          paths: 
+          - Semgrep.json
+          - semgrep-output.json
+          destination: Semgrep-artifact
 
   integration:
     docker:
