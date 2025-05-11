@@ -53,12 +53,12 @@ workflows:
       - test:
           requires:
             - build
-      - bandit:
+      - semgrep:
           requires:
             - test
       - integration:
           requires:
-            - bandit
+            - semgrep
       - prod:
           type: approval
           requires:
