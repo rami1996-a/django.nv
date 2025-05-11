@@ -30,7 +30,7 @@ jobs:
             semgrep scan --config p/secrets --json --output Semgrep.json || true
             docker run --rm -v ${PWD}:/src returntocorp/semgrep semgrep --config auto --output semgrep-output.json --json || true
             mv Semgrep.json semgrep-results
-            mv emgrep-output.json semgrep-results
+            mv semgrep-output.json semgrep-results
       - store_artifacts:
           path: semgrep-results
           destination: Semgrep-artifact
