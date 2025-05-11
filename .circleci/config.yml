@@ -61,12 +61,12 @@ workflows:
       - test:
           requires:
             - build
-      - semgrep:
+      - Semgrep:
           requires:
             - test
       - integration:
           requires:
-            - semgrep
+            - Semgrep
       - prod:
           type: approval
           requires:
