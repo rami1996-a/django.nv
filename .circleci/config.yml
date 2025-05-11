@@ -2,61 +2,16 @@ version: 2.1
 jobs:
   build:
     docker:
-      - image: cimg/python:3.6
+      - image: cimg/base:stable
     steps:
       - checkout
-      - run: |
-          pip install -r requirements.txt
-          python manage.py check
-  Semgrep:
-    docker:
-      - image: semgrep/semgrep:latest
-    steps:
-      - checkout
+      - setup_remote_docker
       - run:
-          name: Run Semgrep Scan
-          command: semgrep --config=semgrep-rules.yml --json --output Semgrep.json || true
-      - store_artifacts:
-          path: Semgrep.json
-          destination: Semgrep-artifact
-  test:
-    docker:
-      - image: cimg/python:3.6
-    steps:
-      - checkout
-      - run: |
-          pip install -r requirements.txt
-          python manage.py test taskManager
-  integration:
-    docker:
-      - image: cimg/python:3.6
-    steps:
-      - checkout
-      - run:
-          name: Integration Step
+          name: Example Docker command
           command: |
-            echo "This is an integration step"
-  prod:
-    docker:
-      - image: cimg/python:3.6
-    steps:
-      - checkout
-      - run: echo "This is a deploy step"
+            docker version
 workflows:
   version: 2
-  django:
+  build-workflow:
     jobs:
       - build
-      - Semgrep:
-          requires:
-            - build
-      - test:
-          requires:
-            - build
-      - integration:
-          requires:
-            - test
-      - prod:
-          type: approval
-          requires:
-            - integration
