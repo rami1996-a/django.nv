@@ -5,20 +5,18 @@ on:
     branches: [ main ]
 
 jobs:
-  bandit:
+  semgrep:
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
       - name: Run detect-secrets Scanner
-        run: |
-            docker pull hysnsec/bandit
-            docker run --rm -v $(pwd):/src hysnsec/bandit -r /src -f json | tee bandit.json
+        run: docker run --rm -v ${PWD}:/src returntocorp/semgrep semgrep --config auto --output semgrep-output.json --json
         continue-on-error: true
-        
+    
       - name: Upload results
         uses: actions/upload-artifact@v4
         with:
           name: security-reports
           path:
-            bandit.json
+            semgrep-output.json
         if: always()
