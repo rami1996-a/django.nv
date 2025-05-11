@@ -32,7 +32,7 @@ jobs:
             mv Semgrep.json semgrep-results
             mv emgrep-output.json semgrep-results
       - store_artifacts:
-          paths: semgrep-results
+          path: semgrep-results
           destination: Semgrep-artifact
 
   integration:
