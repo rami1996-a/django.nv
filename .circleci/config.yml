@@ -58,7 +58,7 @@ workflows:
             - build
       - integration:
           requires:
-            - build
+            - test
       - zap_baseline:
           requires:
             - integration
