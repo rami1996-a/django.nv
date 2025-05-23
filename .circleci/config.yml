@@ -29,7 +29,6 @@ jobs:
           name: Integration step (continues on fail)
           command: |
             echo "This is an integration step"
-            exit 1
   zap_baseline:
     machine: true
     steps:
@@ -65,4 +64,4 @@ workflows:
       - prod:
           type: approval
           requires:
-            - integration
+            - zap_baseline
