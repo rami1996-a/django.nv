@@ -2,16 +2,67 @@ version: 2.1
 jobs:
   build:
     docker:
-      - image: cimg/base:stable
+      - image: python:3.6
     steps:
       - checkout
-      - setup_remote_docker
       - run:
-          name: Example Docker command
+          name: Install dependencies and check
           command: |
-            docker version
+            pip install -r requirements.txt
+            python manage.py check
+  test:
+    docker:
+      - image: python:3.6
+    steps:
+      - checkout
+      - run:
+          name: Install dependencies and test
+          command: |
+            pip install -r requirements.txt
+            python manage.py test taskManager
+  integration:
+    docker:
+      - image: python:3.6
+    steps:
+      - checkout
+      - run:
+          name: Integration step (continues on fail)
+          command: |
+            echo "This is an integration step"
+            exit 1
+  zap_baseline:
+    machine: true
+    steps:
+      - checkout
+      - run:
+          name: ZAP Baseline Scan
+          command: docker run -u root -w /zap -v $(pwd):/zap/wrk:rw --rm -t softwaresecurityproject/zap-stable:2.14.0 zap-baseline.py -t https://prod-rxjmw5i8.lab.practical-devsecops.training -J zap-output.json
+      - store_artifacts:
+          path: zap-output.json
+          destination: zap-output
+  prod:
+    docker:
+      - image: python:3.6
+    steps:
+      - checkout
+      - run:
+          name: Deploy step
+          command: echo "This is a deploy step."
 workflows:
   version: 2
-  build-workflow:
+  django:
     jobs:
       - build
+      - test:
+          requires:
+            - build
+      - integration:
+          requires:
+            - build
+      - zap_baseline:
+          requires:
+            - integration
+      - prod:
+          type: approval
+          requires:
+            - integration
