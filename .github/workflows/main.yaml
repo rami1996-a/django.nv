@@ -1,3 +1,4 @@
+cat >.github/workflows/main.yaml<<EOF
 name: Django                                  # workflow name
 
 on:
@@ -22,22 +23,7 @@ jobs:
           source env/bin/activate
           pip install -r requirements.txt
           python manage.py check
-  sonarqube:
-    runs-on: ubuntu-22.04
-    steps:
-    - uses: actions/checkout@v2
-      with:
-        fetch-depth: 0
 
-    - name: SonarQube Scan
-      uses: sonarsource/sonarqube-scan-action@master
-      env:
-        SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
-      with:
-        projectBaseDir: .
-        args: >
-          -Dsonar.projectKey=Django
   test:
     runs-on: ubuntu-22.04
     needs: build
@@ -56,8 +42,6 @@ jobs:
           pip install -r requirements.txt
           python manage.py test taskManager
 
-
-
   integration:
     runs-on: ubuntu-22.04
     needs: test
@@ -65,9 +49,24 @@ jobs:
       - run: echo "This is an integration step"
       - run: exit 1
         continue-on-error: true
+  
+  zap_baseline:
+    runs-on: ubuntu-22.04
+    needs: test
+    steps:
+      - run: |
+           docker pull softwaresecurityproject/zap-stable:2.14.0
+           docker run --user root --rm -v $(pwd):/zap/wrk:rw -w /zap softwaresecurityproject/zap-stable:2.14.0 zap-baseline.py -t https://prod-rxjmw5i8.lab.practical-devsecops.training -J zap-output.json
+        continue-on-error: true
 
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ZAP Scan
+          path: zap-output.json
+        if: always()        # what is this for?
   prod:
     runs-on: ubuntu-22.04
     needs: integration
     steps:
       - run: echo "This is a deploy step."
+EOF
