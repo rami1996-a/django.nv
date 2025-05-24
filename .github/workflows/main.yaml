@@ -1,114 +1,72 @@
-name: Django CI/CD Pipeline
+name: Django                                  # workflow name
 
-# ─────────────────────────────────────────────────────────────────────────────
-# Triggers: run on any push to main branch
-# ─────────────────────────────────────────────────────────────────────────────
 on:
   push:
-    branches:
+    branches:                                 # similar to "only" in GitLab
       - main
 
 jobs:
-  # ────────────────────────────────────────────────────────────────────────────
-  # 1) BUILD: install dependencies and sanity-check the Django app
-  # ────────────────────────────────────────────────────────────────────────────
   build:
-    runs-on: ubuntu-22.04
-
+    runs-on: ubuntu-22.04                    # similar to "image" in GitLab
     steps:
-      # 1.1 Checkout the repo
       - uses: actions/checkout@v2
 
-      # 1.2 Setup Python (use a supported version—3.8 instead of 3.6)
-      - name: Set up Python 3.8
+      - name: Setup python
         uses: actions/setup-python@v2
         with:
-          python-version: '3.8'
+          python-version: '3.6'
 
-      # 1.3 Create & activate a virtualenv, install deps, run `manage.py check`
-      - name: Install dependencies & run checks
-        run: |
-          python -m pip install --upgrade pip virtualenv
-          python -m virtualenv env
+      - run: |
+          pip3 install --upgrade virtualenv
+          virtualenv env
           source env/bin/activate
           pip install -r requirements.txt
           python manage.py check
 
-  # ────────────────────────────────────────────────────────────────────────────
-  # 2) TEST: run your Django unit tests
-  # ────────────────────────────────────────────────────────────────────────────
   test:
     runs-on: ubuntu-22.04
     needs: build
-
     steps:
       - uses: actions/checkout@v2
 
-      - name: Set up Python 3.8
+      - name: Setup python
         uses: actions/setup-python@v2
         with:
-          python-version: '3.8'
+          python-version: '3.6'
 
-      - name: Install dependencies & run tests
-        run: |
-          python -m pip install --upgrade pip virtualenv
-          python -m virtualenv env
+      - run: |
+          pip3 install --upgrade virtualenv
+          virtualenv env
           source env/bin/activate
           pip install -r requirements.txt
           python manage.py test taskManager
 
-  # ────────────────────────────────────────────────────────────────────────────
-  # 3) INTEGRATION: placeholder for integration steps (always continues)
-  # ────────────────────────────────────────────────────────────────────────────
   integration:
     runs-on: ubuntu-22.04
     needs: test
-
     steps:
-      - name: Integration step
-        run: echo "This is an integration step"
-      - name: Force a failure (simulated)
-        run: exit 1
+      - run: echo "This is an integration step"
+      - run: exit 1
         continue-on-error: true
-        # continue-on-error=true means “if this step fails, proceed anyway.”
 
-  # ────────────────────────────────────────────────────────────────────────────
-  # 4) ZAP BASELINE SCAN: run passive DAST with OWASP ZAP
-  # ────────────────────────────────────────────────────────────────────────────
-  zap_baseline:
-    runs-on: ubuntu-22.04
-    needs: test
-
-    steps:
-      - name: Pull and run ZAP baseline scan
-        run: |
-          docker pull softwaresecurityproject/zap-stable:2.14.0
-          docker run --rm \
-            --user "$(id -u):$(id -g)" \
-            -v "${{ github.workspace }}":/zap/wrk:rw \
-            -w /zap \
-            softwaresecurityproject/zap-stable:2.14.0 \
-            zap-baseline.py \
-              -t https://prod-rxjmw5i8.lab.practical-devsecops.training \
-              -J zap-output.json \
-              -s
-        continue-on-error: true
-        # we don’t want a few low-severity findings to block our pipeline
-
-      - name: Upload ZAP JSON report
-        uses: actions/upload-artifact@v4
-        if: always()               # “always()” ensures this runs even if previous steps failed
-        with:
-          name: zap-scan-report
-          path: zap-output.json
-
-  # ────────────────────────────────────────────────────────────────────────────
-  # 5) PRODUCTION DEPLOY: only runs after integration
-  # ────────────────────────────────────────────────────────────────────────────
-  prod:
+  nuclei:
     runs-on: ubuntu-22.04
     needs: integration
 
     steps:
-      - name: Deploy to production
-        run: echo "This is a deploy step."
+      - uses: actions/checkout@v2
+      - name: Pull and run nuclei scan
+        run: |
+          docker run --user $(id -u):$(id -g) -w /nuclei -v $(pwd):/nuclei:rw --rm projectdiscovery/nuclei:v2.9.6 -u https://prod-rxjmw5i8.lab.practical-devsecops.training -j -o nuclei-output.json
+        continue-on-error: true
+      - uses: actions/upload-artifact@v4
+        with:
+          name: nuclei
+          path: nuclei-output.json
+        if: always()
+
+  prod:
+    runs-on: ubuntu-22.04
+    needs: integration
+    steps:
+      - run: echo "This is a deploy step."
