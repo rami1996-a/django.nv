@@ -28,16 +28,16 @@ jobs:
             exit 1
           when: on_fail           # Even if the job fails, continue to the next stages
 
-  zap_baseline:
+  nuclei:
     machine: true
     steps:
       - checkout
       - run:
-          command: docker run -u root -w /zap -v \$(pwd):/zap/wrk:rw --rm -t softwaresecurityproject/zap-stable:2.14.0 zap-baseline.py -t https://prod-rxjmw5i8.lab.practical-devsecops.training -J zap-output.json"
+          name: nuclei Scan
+          command: docker run --user $(id -u):$(id -g) -w /nuclei -v $(pwd):/nuclei:rw --rm projectdiscovery/nuclei:v2.9.6 -u https://prod-rxjmw5i8.lab.practical-devsecops.training -j -o nuclei-output.json || true
       - store_artifacts:
-          path: zap-output.json
-          destination: zap-output
-          when: always
+          path: nuclei-output.json
+          destination: nuclei-output
 
   prod:
     docker:
@@ -57,7 +57,7 @@ workflows:
       - integration:
           requires:
             - build
-      - zap_baseline:
+      - nuclei:
           requires:
             - integration
       - prod:
