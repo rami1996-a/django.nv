@@ -1,67 +1,46 @@
 version: 2.1
 jobs:
-  build:
-    docker:
-      - image: python:3.6
-    steps:
-      - checkout
-      - run:
-          name: Install dependencies and check
-          command: |
-            pip install -r requirements.txt
-            python manage.py check
-  test:
-    docker:
-      - image: python:3.6
-    steps:
-      - checkout
-      - run:
-          name: Install dependencies and test
-          command: |
-            pip install -r requirements.txt
-            python manage.py test taskManager
-  integration:
-    docker:
-      - image: python:3.6
-    steps:
-      - checkout
-      - run:
-          name: Integration step (continues on fail)
-          command: |
-            echo "This is an integration step"
-  zap_baseline:
+  terrascan:
     machine: true
     steps:
       - checkout
       - run:
-          name: ZAP Baseline Scan
-          command: docker run -u root -w /zap -v $(pwd):/zap/wrk:rw --rm -t softwaresecurityproject/zap-stable:2.14.0 zap-baseline.py -t https://prod-rxjmw5i8.lab.practical-devsecops.training -J zap-output.json || true
+          command: docker run --rm -v $(pwd):/src tenable/terrascan scan -t aws -d /src/aws -o json | tee terrascan-output.json || true
       - store_artifacts:
-          path: zap-output.json
-          destination: zap-output
-  prod:
-    docker:
-      - image: python:3.6
+          path: terrascan-output.json
+          destination: terrascan-artifact
+          when: always
+  test:
+    machine: true
+    steps:
+      - checkout
+      - run: echo "This is a test step"
+  integration:
+    machine: true
     steps:
       - checkout
       - run:
-          name: Deploy step
-          command: echo "This is a deploy step."
+          command: |
+            echo "This is an integration step"
+            exit 1
+          when: on_fail
+  prod:
+    machine: true
+    steps:
+      - checkout
+      - run: echo "This is a deploy step"
 workflows:
   version: 2
-  django:
+  terraform:
     jobs:
-      - build
+      - terrascan
       - test:
           requires:
-            - build
+            - terrascan
       - integration:
           requires:
             - test
-      - zap_baseline:
-          requires:
-            - integration
       - prod:
           type: approval
           requires:
-            - zap_baseline
+            - integration
